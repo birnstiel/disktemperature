@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import os
 _data_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -83,6 +84,12 @@ def get_opac(model,top,shape,rosseland,rho,nt,t0,t1):
 	-------
 	T,kappa: temperature and opacity arrays
 	"""
+	
+	# this is to circumvent what is likely a C-compiler error
+
+	import locale
+	locale.setlocale(locale.LC_ALL, 'C')
+	
 	cwd   = os.getcwd()
 	kappa = None
 	try:
@@ -110,6 +117,8 @@ def _test(plot=True):
 	k_test = np.array([k_test[0],k_test[1]])
 	if plot:
 		import matplotlib.pyplot as plt
+		from matplotlib.pyplot import style
+		style.use(['seaborn-darkgrid',{'font.size':15}])
 		f,ax = plt.subplots()
 		ax.loglog(*k_orig,label='original data')
 		ax.loglog(*k_test,label='test data')
