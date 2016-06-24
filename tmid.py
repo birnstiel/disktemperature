@@ -2,7 +2,7 @@
 import numpy as np
 import constants as _c
 
-def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p):
+def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p,T0):
     """
     Objective function for the temperature calculation. Solve equation
     t_function(Td)==0 to find Td.
@@ -27,6 +27,9 @@ def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p):
     kappa_r,kappa_p : functions
     : scalar functions with temperature as only argument - returning the
       Rosseland and Planck mean opacities at that temperature, respectively
+      
+    T0 : float
+    : minimum temperature
 
     Returns:
     --------
@@ -48,7 +51,8 @@ def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p):
         + 9./(8.*_c.sig_sb)*(3./8.*tau_r_dust+0.5/tau_p_dust)*sig_g*alpha*cs**2*om \
         + L_star/(2.*_c.sig_sb*4*np.pi*r**2)* \
             ( kap_p_star/kap_p_dust*0.5*np.exp(-tau_p_star/np.sin(phi)) \
-            + phi )
+            + phi ) \
+        + T0**4
 
 class tmid:
 
@@ -68,6 +72,7 @@ class tmid:
     L_star    = None
 
     phi       = 0.05 # irradiation angle
+    Tmin      = 7.   # minimum temperature
 
     pseudo_gas_opacity = 0.001
 
@@ -206,21 +211,30 @@ class tmid:
 
         if doreturn: return kwargs
 
-    def get_t_mid(self,r,sig_g,sig_d,alpha):
+    def get_t_mid(self,r,sig_g,sig_d,alpha,phi=None):
         """
          This subroutine updates the Temperature array
 
-         where:     n          = the size of the grid
-                    r          = the grid
-                    sigma      = the total surface density array
-                    T          = the midplane temperature array
-                    T_ma       = active temperature
-                    T_md       = dead temperature
-                    is_active  = if cells are active (1) or dead (0)
-                    alpha      = alpha active
-                    alpha_dead = alpha in dead zone
+        r : array
+        :   the grid
+        
+        sig_g , sig_d : array
+        :   the total gas, dust surface density on grid r
+        
+        alpha : array
+        :   turbulence alpha on grid r
+        
+        Keywords:
+        ---------
+        
+        phi : float | array
+        :   irradiation angle (constant or r-dependent), if None, the initialized value is taken 
+        
         """
         from scipy.optimize import brentq
+        
+        if phi is None: phi = self.phi
+        phi = phi*np.ones(len(r))
 
         # average the opacities of the grain sizes
         # this will be of shape (n_freq,n_r)
@@ -238,7 +252,7 @@ class tmid:
         for i in range(len(r)):
             k_r = lambda T: self.kappa_r(T,i)
             k_p = lambda T: self.kappa_p(T,i)
-            T[i]  = brentq(t_function,0.1,1e4,args=(r[i],sig_g[i],sig_d_total[i],alpha[i],self.phi,self.M_star,self.T_star,self.L_star,k_r,k_p))
+            T[i]  = brentq(t_function,0.1,1e4,args=(r[i],sig_g[i],sig_d_total[i],alpha[i],phi[i],self.M_star,self.T_star,self.L_star,k_r,k_p,self.Tmin))
 
         return T
 
