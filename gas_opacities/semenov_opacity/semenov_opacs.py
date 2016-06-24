@@ -22,6 +22,7 @@ def _init_():
 	# if the wrapper doesn't exist, strip the program part from the opacities
 	
 	if 'opacity_routine.f' not in present_files:
+		print('Patching fortran code')
 		with open(_data_path+os.sep+'opacity_routine.f','w') as fo, open(_data_path+os.sep+'opacity.f') as fi:
 			write=False
 			for line in fi.readlines():
@@ -85,7 +86,6 @@ def get_opac(model,top,shape,rosseland,rho,nt,t0,t1):
 	cwd   = os.getcwd()
 	kappa = None
 	try:
-		print('cd to \''+_data_path+'\'')
 		os.chdir(_data_path)
 		kappa = opac.opacity(model,top,shape,rosseland,rho,nt,t0,t1)
 	except:
@@ -93,3 +93,27 @@ def get_opac(model,top,shape,rosseland,rho,nt,t0,t1):
 	finally:
 		os.chdir(cwd)
 	return kappa
+	
+def _test(plot=True):
+	import numpy as np
+	with open(_data_path+os.sep+'opacity.inp') as f:
+		model = f.readline().split()[0]
+		top   = f.readline().split()[0]
+		shape = f.readline().split()[0]
+		ross  = bool(f.readline().split()[0])
+		rho   = float(f.readline().split()[0])
+		nt    = int(f.readline().split()[0])
+		t0    = float(f.readline().split()[0])
+		t1    = float(f.readline().split()[0])
+	k_orig = np.loadtxt(_data_path+os.sep+'k'+('R'*ross)+('P'*(not ross))+'.out').T
+	k_test = get_opac(model,top,shape,ross,rho,nt,t0,t1)
+	k_test = np.array([k_test[0],k_test[1]])
+	if plot:
+		import matplotlib.pyplot as plt
+		f,ax = plt.subplots()
+		ax.loglog(*k_orig,label='original data')
+		ax.loglog(*k_test,label='test data')
+		ax.set_xlabel('T [K]')
+		ax.legend(fontsize='small',loc='best')
+		ax.set_ylabel('$\kappa_\mathrm{'+(ross*'R'+(not ross)*'P')+'}$ [cm$^2$ / g]')
+	print('Test was '+'not '*(not np.all(np.isclose(k_orig,k_test)))+'passed')
