@@ -350,3 +350,117 @@ class tmid:
 
         self._kappa_p_lookup = np.trapz(kappa_mean[np.newaxis,:,:]*self.Bnu[:,:,np.newaxis],x=self.freq,axis=1)/self.Bnu_int[:,np.newaxis]
         self._kappa_r_lookup= np.trapz(1./kappa_mean[np.newaxis,:,:]*self.dBnudT[:,:,np.newaxis],x=self.freq,axis=1)/self.dBnudT_int[:,np.newaxis]
+
+
+
+def temperature_iterator(r,T_of_phi,H_of_T,phi=0.05,n_i=30,n_poly=10,phi_min=0.01,do_plot=False,convergence=1e-3):
+    """
+    Iterates the temperature calculation and the irradiation angle calculation.
+    
+    Arguments:
+    ----------
+    
+    r : array
+    :   radial grid on which T is calculated [cm]
+    
+    T_of_phi : function
+    :   given an irradiation angle(-array), return the calculated temperature
+    
+    H_of_T : function
+    :   given a Temperature(-array), return the calculated scale height, the irradiation
+        angle is then determined by
+
+                dH      H
+        phi =  ---- -  ---
+                dr      r
+                
+    Keywords:
+    ---------
+    
+    phi : float or array
+    :   initial guess for the irradiation angle phi
+    
+    n_i : int
+    :   maximum number of iterations to be done
+    
+    n_poly : int
+    :   order of the polynomial that is used for fitting/smoothing phi
+    
+    phi_min : float
+    :   minimum value for phi
+    
+    do_plot : bool
+    :   whether or not to plot the iteration results
+    
+    convergence : float
+    :   maximum relative change as exit criterion, default: 0.1%
+    """
+    
+    # define the function that fits phi with a smooth curve to avoid oscillations
+    
+    from scipy.optimize import curve_fit
+    import matplotlib.pyplot as plt
+    def fitphi(r,phi,n):
+        """
+        Fit a n-th order poynomial to phi as function of log10(r).
+        """
+
+        def func(x, *p):
+            return np.poly1d(p)(np.log10(x))
+
+        popt, _ = curve_fit(func, r, phi, p0=np.ones(n))
+
+        return func(r,*popt)
+    
+
+    phi    = np.minimum(phi,phi_min)*np.ones(len(r))
+    T      = T_of_phi(phi)
+    RES    = []
+
+    if do_plot:
+        _,axs = plt.subplots(2,sharex=True)
+        cols  = plt.cm.get_cmap('Reds')(np.linspace(0,1,n_i+1))
+
+    for i in range(n_i+1):
+        phio = phi[:]
+        To   = T[:]
+        T    = T_of_phi(phi=phi)
+        H    = H_of_T(T)
+        dHdr = np.diff(H)/np.diff(r)
+        dHdr = 0.5*(dHdr[1:]+dHdr[:-1])
+        dHdr = np.hstack((dHdr[0],dHdr,dHdr[-1]))
+        phi  = dHdr-H/r
+        phi  = fitphi(r,phi,n_poly)
+        phi  = np.maximum(phi,phi_min)
+        phi  = (phi+phio)*0.5
+        res  = np.abs(To/T-1).max()
+
+        # plotting part
+        
+        if do_plot:
+            RES += [res]
+            if i in [0,n_i]:
+                ls = '--'
+            else:
+                ls = '-'
+
+            axs[0].loglog(r/_c.AU,T,    ls=ls,c=cols[i])
+            axs[1].semilogx(r/_c.AU,phi,ls=ls,c=cols[i])
+            
+        # exit criterion
+        
+        if i>0 and res<convergence:
+            break
+
+    if do_plot:
+        axs[0].set_xlabel('r [AU]')
+        axs[0].set_ylabel('T [K]')
+        axs[1].set_xlabel('r [AU]')
+        axs[1].set_ylabel('$\phi$')
+
+        _,ax = plt.subplots()
+        ax.semilogy(np.array(RES)*100)
+        ax.set_xlabel('iteration #')
+        ax.set_ylabel('relative change in %');
+
+    return T
