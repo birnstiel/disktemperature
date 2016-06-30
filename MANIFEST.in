@@ -1,0 +1,3 @@
+include tests/*.ipynb
+include README.md
+include LICENSE
