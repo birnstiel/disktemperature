@@ -127,7 +127,7 @@ class tmid:
         #
         # update global defaults and calculate size and wavelength arrays
         #
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             if hasattr(self,k): setattr(self,k,v)
         self.a        = np.logspace(np.log10(self._amin),np.log10(self._amax),self._na)
         self.lam_mic  = np.logspace(np.log10(self._lmin)+4,np.log10(self._lmax)+4,self._nl)

@@ -71,7 +71,8 @@ class track:
         delete : bool
         :   if True, delete the downloaded archives after extracting them
         """
-        import urllib2, sys, tarfile
+        import sys, tarfile
+        from urllib import request
         
         if not _os.path.isdir(self._track_dir): _os.mkdir(self._track_dir)
         
@@ -88,10 +89,10 @@ class track:
                 
                 # open url, get file name and size
             
-                remotefile = urllib2.urlopen(url)
+                remotefile = request.urlopen(url)
                 meta      = remotefile.info()
-                file_name = meta.getheaders('Content-Disposition')[0].split('"')[1]
-                file_size = int(meta.getheaders("Content-Length")[0])
+                file_name = meta.get_filename()
+                file_size = int(meta['Content-Length'])
                 
                 downloaded_files += [[file_name,z]]
             
@@ -136,7 +137,7 @@ class track:
                             if _os.path.isfile(file_.name): _os.unlink(file_.name)
                             tar.extract(file_)
                             
-            except Exception, _:  
+            except:  
                 import traceback
                 print('Could not extract '+file_name+'\n')  
                 print('Traceback:')  
