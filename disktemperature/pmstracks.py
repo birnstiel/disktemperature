@@ -8,32 +8,33 @@ R_sun = _c.R_sun.cgs.value
 L_sun = _c.L_sun.cgs.value
 
 class track:
+    """
+    Stellar evolutionary track based on Siess L., Dufour E., Forestini M. 2000, A&A, 358, 593.
+    
+    Data files need to reside in the folder `tracks/`, if not, the files will be downloaded from
+    http://www.astro.ulb.ac.be/~siess/
+    
+    Keywords:
+    ---------
+    
+    m : string
+    :  stellar mass in solar masses as string
+    
+    z : string
+    :  metallicity mass fraction, notation: \'01\' = 0.01. Possible values are {}
+    
+    track_dir : string
+    :   path to the place where the tracks are located. Defaults to 'tracks/' in the module path.
+    """
     
     _zs   = ['01','02','03','04']
     _mask = [2,4,6] # column indices of L, Reff, and Teff in the data file
     _it   = -1      # column index of the age in the data file
     
+    __doc__=__doc__.format(', '.join(_zs))
+    
+    
     def __init__(self,m='0.5',z='01',track_dir=None):
-        """
-        Stellar evolutionary track based on Siess L., Dufour E., Forestini M. 2000, A&A, 358, 593.
-        
-        Data files need to reside in the folder `tracks/`, if not, the files will be downloaded from
-        http://www.astro.ulb.ac.be/~siess/
-        
-        Keywords:
-        ---------
-        
-        m : string
-        :  stellar mass in solar masses as string
-        
-        z : string
-        :  metallicity mass fraction, notation: \'01\' = 0.01. Possible values are"""+', '.join(self._zs)+\
-        """
-        
-        track_dir : string
-        :   path to the place where the tracks are located. Defaults to 'tracks/' in the module path.
-        """
-        
         
         from scipy.interpolate import interp1d
         import glob
@@ -51,8 +52,15 @@ class track:
         
         self._ms = [_os.path.basename(file_)[1:].split('z')[0] for file_ in glob.glob(_os.path.join(self._track_dir,'Z'+z,'*.hrd'))]
         
+        # update docstring to show available masses 
+        
+        doc = self.__doc__.split('\n')
+        i, = [i for i,d in enumerate(doc) if d.strip().startswith('m :')]
+        doc[i+1] = doc[i+1]+', possible values: '+', '.join(self._ms)
+        self.__doc__ = '\n'.join(doc)
+        
         if m not in self._ms:
-            raise ValueError('Selected mass for z={} not in available masses: {}'.format(z,', '.join(self._ms)))
+            raise ValueError('Selected mass m={} for z={} not in available masses: {}'.format(m,z,', '.join(self._ms)))
         
         
         # load data and create interpoation function
