@@ -2,7 +2,7 @@
 import numpy as np
 import constants as _c
 
-def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p,T0):
+def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p,T0,pseudo_gas_opacity):
     """
     Objective function for the temperature calculation. Solve equation
     t_function(Td)==0 to find Td.
@@ -30,6 +30,9 @@ def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p,T
       
     T0 : float
     : minimum temperature
+    
+    pseudo_gas_opacity : float
+    : this gives some constant gas opacity value to avoid dust-free environments becoming too hot
 
     Returns:
     --------
@@ -43,9 +46,9 @@ def t_function(Td,r,sig_g,sig_d,alpha,phi,M_star,T_star,L_star,kappa_r,kappa_p,T
     kap_p_dust = kappa_p(Td)
     kap_p_star = kappa_p(T_star)
 
-    tau_r_dust = 0.5*sig_d*kap_r_dust
-    tau_p_dust = 0.5*sig_d*kap_p_dust
-    tau_p_star = 0.5*sig_d*kap_p_star
+    tau_r_dust = 0.5*sig_d*kap_r_dust+0.5*sig_g*pseudo_gas_opacity
+    tau_p_dust = 0.5*sig_d*kap_p_dust+0.5*sig_g*pseudo_gas_opacity
+    tau_p_star = 0.5*sig_d*kap_p_star+0.5*sig_g*pseudo_gas_opacity
 
     return -Td**4 \
         + 9./(8.*_c.sig_sb)*(3./8.*tau_r_dust+0.5/tau_p_dust)*sig_g*alpha*cs**2*om \
@@ -74,7 +77,8 @@ class tmid:
     phi       = 0.05 # irradiation angle
     Tmin      = 7.   # minimum temperature
 
-    pseudo_gas_opacity = 0.001
+    pseudo_gas_opacity = 0.0001  # assumed constant gas opacity value [cm^2/g]
+    dust_opacity_floor = 0.00001 # dust opacity will never drop below this minimum [cm^2/g]
 
         # those are the hidden attributes, that influence the initialization should
         # be updated to be "properties" at some point
@@ -252,7 +256,7 @@ class tmid:
         for i in range(len(r)):
             k_r = lambda T: self.kappa_r(T,i)
             k_p = lambda T: self.kappa_p(T,i)
-            T[i]  = brentq(t_function,0.1,1e4,args=(r[i],sig_g[i],sig_d_total[i],alpha[i],phi[i],self.M_star,self.T_star,self.L_star,k_r,k_p,self.Tmin))
+            T[i]  = brentq(t_function,0.1,1e4,args=(r[i],sig_g[i],sig_d_total[i],alpha[i],phi[i],self.M_star,self.T_star,self.L_star,k_r,k_p,self.Tmin,self.pseudo_gas_opacity))
 
         return T
 
@@ -286,11 +290,11 @@ class tmid:
 
         if(temp > self._t_max_dust):
             if(temp > self._t_max_dust+self._delta_temp):
-                k = self.pseudo_gas_opacity
+                k = self.dust_opacity_floor
             else:
-                k = (k+self.pseudo_gas_opacity)/2. * \
+                k = (k+self.dust_opacity_floor)/2. * \
                         np.cos(np.pi/self._delta_temp*(temp-self._t_max_dust)) + \
-                        (k+self.pseudo_gas_opacity)/2.
+                        (k+self.dust_opacity_floor)/2.
         return k
 
     def kappa_p(self,temp,i):
