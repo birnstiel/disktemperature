@@ -2,3 +2,9 @@ kP_h2001.dat
 kR_h2001.dat
 opac.so
 opac.so.dSYM/
+opacity_routine.f
+opacity.f
+opacity.inp
+Readme.txt
+opac.*
+kR.out

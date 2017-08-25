@@ -51,7 +51,7 @@ def _init_():
     # try importing, if it doesn't work, try compiling & then importing
 
     try:
-        import opac # noqa
+        from . import opac # noqa
     except:
         print('Compiling fortran module')
         try:
@@ -70,7 +70,7 @@ def _init_():
 
 _header = _init_()
 
-import opac # noqa
+from . import opac # noqa
 __all__ = ['opac','get_opac'] # noqa
 
 
