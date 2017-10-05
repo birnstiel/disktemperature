@@ -9,7 +9,7 @@ setup(
     use_scm_version=True,
     description='Simple protoplanetary disk temperature estimates and auxiliary functions',
     long_description=open(os.path.join(
-        os.path.dirname(__file__), 'Readme.md')).read(),
+        os.path.dirname(__file__), 'README.md')).read(),
     url='http://www.til-birnstiel.de',
     author='Til Birnstiel',
     author_email='birnstiel@me.com',
