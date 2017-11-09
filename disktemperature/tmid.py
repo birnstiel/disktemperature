@@ -414,8 +414,8 @@ class tmid:
         """
         self._kappa_p_lookup = np.trapz(
             kappa_mean[np.newaxis, :, :] * self.Bnu[:, :, np.newaxis], x=self.freq, axis=1) / self.Bnu_int[:, np.newaxis]
-        self._kappa_r_lookup = np.trapz(
-            1. / kappa_mean[np.newaxis, :, :] * self.dBnudT[:, :, np.newaxis], x=self.freq, axis=1) / self.dBnudT_int[:, np.newaxis]
+        self._kappa_r_lookup = self.dBnudT_int[:, np.newaxis] / np.trapz(
+            1. / kappa_mean[np.newaxis, :, :] * self.dBnudT[:, :, np.newaxis], x=self.freq, axis=1)
 
 
 def temperature_iterator(r, T_of_phi, H_of_T, phi=0.05, n_i=30, n_poly=10, phi_min=0.01, do_plot=False, convergence=1e-3):
